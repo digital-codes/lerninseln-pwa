@@ -14,16 +14,25 @@
           <ion-label>Angebote</ion-label>
         </ion-tab-button>
 
-        <ion-tab-button class="ka-tab-btn" @click="refresh">
+        <ion-tab-button v-if="enableRefresh" class="ka-tab-btn" @click="refresh">
           <ion-spinner v-if="refreshing" name="lines-small"></ion-spinner>
           <ion-icon v-else :icon="refreshOutline" />
           <ion-label>Refresh</ion-label>
         </ion-tab-button>
 
+        <!--
         <ion-tab-button class="ka-tab-btn" >
           <ion-label>{{ pwaStat }} </ion-label>
         </ion-tab-button>
-       
+        -->
+
+        <!--
+        <ion-item>
+          <ion-checkbox v-model="tglState" slot="start" @ionChange="toggle"></ion-checkbox>
+        </ion-item>
+
+        -->
+
       </ion-tab-bar>
     </ion-tabs>
   </ion-page>
@@ -34,9 +43,10 @@ import { IonRouterOutlet, IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, I
 import { IonSpinner } from '@ionic/vue';
 import { ref } from "vue"
 
-import { 
-  refreshOutline,
- } from 'ionicons/icons';
+//import { IonCheckbox } from '@ionic/vue';
+
+
+import { refreshOutline } from 'ionicons/icons';
 
 
 import { 
@@ -57,6 +67,19 @@ export default {
   components: { 
     IonLabel, IonRouterOutlet, IonTabs, IonTabBar, IonTabButton, IonIcon, IonPage,
     IonSpinner,
+    //IonCheckbox,
+  },
+  watch: {
+    '$route' (to, from) {
+      if (to.path == "/intro") {
+        //console.log('P: Now on intro');
+        this.enableRefresh = false
+      }
+      if (to.path == "/map") {
+        //console.log('P: Now on map');
+        this.enableRefresh = true
+      }
+    }
   },
   methods: {
     refreshCompleted() {
@@ -76,6 +99,23 @@ export default {
       setTimeout(this.refreshCompleted,1000)
       this.pwaStat = stat
     },
+    tabUpdate(stat) {
+      console.log("Map:",stat)
+      this.onMap = stat
+    },
+    toggle(){
+      console.log("toggle changed to:",this.tglState) 
+      //this.checkToggle(!ev.checked)
+      this.checkToggle(this.tglState)
+    },
+    checkToggle(shouldCheck) {
+      console.log("check:",shouldCheck)
+      if (shouldCheck)
+        document.body.classList.toggle('dark', true);
+      else
+        document.body.classList.toggle('dark', false);
+      //this.toggle.checked = shouldCheck;
+    },
   },
   inject: {
     emitter: {
@@ -85,11 +125,25 @@ export default {
   mounted(){
     // set emitter target
     this.emitter.on("info",e => this.statUpdate(e)) 
+    this.emitter.on("showFetching",e => {
+      this.refreshing = true
+      this.statUpdate("Refresh")
+    } )
+
+    // enable refresh if on map, initially
+    if (this.$route.path == "/map") {
+      this.enableRefresh = true
+    }
   },
   setup() {
+    const enableRefresh = ref(false)
+    const tglState = ref(0)
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
     const refreshing = ref(false)
     const pwaStat = ref("Ready")
+    const onMap = ref(false)
     return {
+      onMap,
       homeOutline, 
       albumsOutline,
       mapOutline,
@@ -99,6 +153,9 @@ export default {
       refreshing,
       refreshOutline,
       pwaStat,
+      prefersDark,
+      tglState,
+      enableRefresh, 
     }
   }
 }
@@ -108,7 +165,6 @@ export default {
 
 
 /* tab button color from app.vue */
-
 .ka-tabs {
   background-color: #048500;
 }

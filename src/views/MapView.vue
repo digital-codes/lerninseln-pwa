@@ -34,7 +34,7 @@
     <ion-content>
       <div ref="tab2" class="swiping">
 
-      <ion-card >
+      <ion-card>
       <ion-card-content>
         <SingleFilter  v-if="!loading"
           :reload="reload"
@@ -180,6 +180,7 @@ export default defineComponent( {
       }
 
       this.reload = false // prop to components
+      this.updated++
       return status
     },
     onSwipe(detail) {
@@ -189,7 +190,15 @@ export default defineComponent( {
       const vx = detail.velocityX;
       //console.log(type,cx,dx,vx)
       if ((type == "pan") && (dx > 100) && (vx > 1)) router.push("/intro")
-      if ((type == "pan") && (dx > 100) && (vx < 1)) this.emitter.emit("info",{"map":"pan"})
+    },
+    onRefresh(detail) {
+      const dy = detail.deltaY;
+      const vy = detail.velocityY;
+      //console.log(dy,vy)
+      if ((dy > 50) && (vy > 1)) {
+        this.emitter.emit("showFetching")
+        this.rl()
+      }
     }
   },
   async beforeMount() {
@@ -224,21 +233,45 @@ export default defineComponent( {
       //alert("refresh")
       this.rl()
       }) 
+
     const gest = this.$refs.tab2 //ref();
+    console.log("gest ",gest)
     const r = router.currentRoute.value.path // value is important!
     //console.log("Current: ",r,"ref2:",gest)
     //setTimeout(function(){console.log(r.path)},2000)
-    const gesture = createGesture({
+    const swipeGesture = createGesture({
       onMove: (detail) => { this.onSwipe(detail);},
       gestureName: 'swipe',
+      direction:"x",
       el: gest,
     })
-    gesture.enable();
+    swipeGesture.enable();
+
+    const refreshGesture = createGesture({
+      onMove: (detail) => { this.onRefresh(detail);},
+      gestureName: 'refresh',
+      direction:"y",
+      el: gest,
+    })
+    refreshGesture.enable();
+
   },
   inject: {
     emitter: {
       from: 'emitter'
     }
+  },
+  watch: {
+    '$route' (to, from) {
+      //console.log('Rout update2',to,from);
+      if (to.path == "/map") {
+        console.log('Now on map view');
+        this.emitter.emit("map",true)
+      } else {
+        console.log('Leaving map view');
+        this.emitter.emit("map",false)
+      }
+    },
   },
   setup() {
     const events = ref([])
